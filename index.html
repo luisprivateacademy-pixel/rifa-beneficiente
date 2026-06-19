@@ -224,7 +224,8 @@ function RifaApp() {
     valor: CONFIG.valor,
     premio: CONFIG.premio,
     tema: CONFIG.tema,
-    data_sorteio: CONFIG.data_sorteio
+    data_sorteio: CONFIG.data_sorteio,
+    totalNumeros: CONFIG.totalNumeros
   });
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState("numeros");
@@ -246,6 +247,7 @@ function RifaApp() {
   const [ePremio, setEPremio] = useState("");
   const [eData, setEData] = useState("");
   const [eTema, setETema] = useState("emerald");
+  const [eTotal, setETotal] = useState("");
   const T = temaDe(cfg.tema);
   const participantes = data.participantes || {};
   const reservados = Object.keys(participantes);
@@ -269,7 +271,8 @@ function RifaApp() {
       valor: CONFIG.valor,
       premio: CONFIG.premio,
       tema: CONFIG.tema,
-      data_sorteio: CONFIG.data_sorteio
+      data_sorteio: CONFIG.data_sorteio,
+      totalNumeros: CONFIG.totalNumeros
     };
     try {
       const {
@@ -282,7 +285,8 @@ function RifaApp() {
           valor: c.valor != null ? c.valor : novaCfg.valor,
           premio: c.premio != null ? c.premio : novaCfg.premio,
           tema: c.tema != null ? c.tema : novaCfg.tema,
-          data_sorteio: c.data_sorteio != null ? c.data_sorteio : novaCfg.data_sorteio
+          data_sorteio: c.data_sorteio != null ? c.data_sorteio : novaCfg.data_sorteio,
+          totalNumeros: c.total_numeros != null ? c.total_numeros : novaCfg.totalNumeros
         };
       }
     } catch (e) {/* tabela/colunas de config ainda não existem — usa padrões */}
@@ -401,15 +405,24 @@ function RifaApp() {
     setEPremio(String(cfg.premio != null ? cfg.premio : ""));
     setEData(cfg.data_sorteio || "");
     setETema(cfg.tema || "emerald");
+    setETotal(String(cfg.totalNumeros != null ? cfg.totalNumeros : 100));
     setEditAberto(true);
   }
   async function salvarConfig() {
+    let novoTotal = Math.round(Number(String(eTotal).replace(",", ".")) || CONFIG.totalNumeros);
+    if (!novoTotal || novoTotal < 1) novoTotal = 1;
+    if (novoTotal > 1000) novoTotal = 1000;
+    const maxReservado = reservados.length ? Math.max.apply(null, reservados.map(Number)) : 0;
+    if (novoTotal < maxReservado) {
+      if (!window.confirm("Existem números reservados acima de " + novoTotal + " (o maior é o " + maxReservado + "). Eles vão sumir da grade, mas continuam aparecendo em Pessoas. Continuar?")) return;
+    }
     const payload = {
       id: 1,
       titulo: eTitulo.trim() || CONFIG.titulo,
       subtitulo: eSub.trim(),
       valor: Number(String(eValor).replace(",", ".")) || 0,
       premio: Number(String(ePremio).replace(",", ".")) || 0,
+      total_numeros: novoTotal,
       data_sorteio: eData.trim(),
       tema: eTema,
       atualizado_em: new Date().toISOString()
@@ -418,7 +431,7 @@ function RifaApp() {
       error
     } = await db.from("rifa_config").upsert(payload);
     if (error) {
-      alert("Não consegui salvar. Verifique se você rodou o SQL da config (tabela 'rifa_config' e as colunas 'tema'/'data_sorteio'). Detalhe: " + error.message);
+      alert("Não consegui salvar. Verifique se você rodou o SQL da config (tabela 'rifa_config' e as colunas tema, data_sorteio, total_numeros). Detalhe: " + error.message);
       return;
     }
     setEditAberto(false);
@@ -431,7 +444,7 @@ function RifaApp() {
       setTimeout(() => setCopiado(false), 1800);
     } catch (e) {}
   }
-  const pct = Math.round(reservados.length / CONFIG.totalNumeros * 100);
+  const pct = Math.round(reservados.length / (cfg.totalNumeros || 1) * 100);
   if (!loaded) return /*#__PURE__*/React.createElement("div", {
     className: "min-h-screen grid place-items-center bg-stone-100 text-stone-500"
   }, "Carregando rifa…");
@@ -491,7 +504,7 @@ function RifaApp() {
     className: "mt-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px] text-white/70 mb-1"
-  }, /*#__PURE__*/React.createElement("span", null, reservados.length, " de ", CONFIG.totalNumeros, " reservados"), /*#__PURE__*/React.createElement("span", null, pagos.length, " pagos • ", brl(arrecadado))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, reservados.length, " de ", cfg.totalNumeros, " reservados"), /*#__PURE__*/React.createElement("span", null, pagos.length, " pagos • ", brl(arrecadado))), /*#__PURE__*/React.createElement("div", {
     className: "h-2 " + T.soft + " rounded-full overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-amber-400 rounded-full transition-all",
@@ -522,7 +535,7 @@ function RifaApp() {
   }), "pago"))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-5 gap-2.5"
   }, Array.from({
-    length: CONFIG.totalNumeros
+    length: cfg.totalNumeros
   }, (_, i) => i + 1).map(n => {
     const p = participantes[String(n)];
     const ganhador = data.sorteio && data.sorteio.numero === n;
@@ -872,6 +885,12 @@ function RifaApp() {
     value: ePremio,
     onChange: setEPremio,
     placeholder: "200",
+    type: "number"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Quantidade de números",
+    value: eTotal,
+    onChange: setETotal,
+    placeholder: "100",
     type: "number"
   }), /*#__PURE__*/React.createElement(Field, {
     label: "Data do sorteio (opcional)",
