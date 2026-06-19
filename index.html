@@ -324,7 +324,7 @@ function RifaApp() {
       contato: p.contato
     });
     setSorteando(false);
-    if (error) alert("O sorteio já foi realizado.");
+    if (error) alert("O sorteio já foi realizado.");else setTab("ganhador");
     carregar();
   }
   async function reiniciar() {
@@ -545,25 +545,19 @@ function RifaApp() {
     style: serif,
     className: "text-lg font-bold mb-3"
   }, "Sorteio"), data.sorteio ? /*#__PURE__*/React.createElement("div", {
-    className: "bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950 rounded-3xl p-6 text-center shadow-lg"
+    className: "bg-white rounded-3xl p-8 border border-stone-200 text-center"
   }, /*#__PURE__*/React.createElement(Ico, {
-    name: "trophy",
-    size: 40,
-    className: "mx-auto mb-2"
+    name: "check",
+    size: 36,
+    className: "mx-auto mb-3 text-emerald-600"
   }), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs uppercase tracking-widest font-bold"
-  }, "Número sorteado"), /*#__PURE__*/React.createElement("p", {
-    style: serif,
-    className: "text-6xl font-bold my-1"
-  }, data.sorteio.numero), /*#__PURE__*/React.createElement("div", {
-    className: "bg-amber-950/10 rounded-2xl py-3 mt-3"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-lg font-bold"
-  }, data.sorteio.nome), /*#__PURE__*/React.createElement("p", {
-    className: "text-sm"
-  }, data.sorteio.contato)), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] mt-3 opacity-70"
-  }, "Sorteado em ", new Date(data.sorteio.ts).toLocaleString("pt-BR"))) : !isOrg ? /*#__PURE__*/React.createElement("div", {
+    className: "text-stone-700 font-semibold mb-1"
+  }, "Sorteio já realizado"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-stone-400 mb-5"
+  }, "O número ", data.sorteio.numero, " foi sorteado."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab("ganhador"),
+    className: "w-full bg-amber-500 text-amber-950 rounded-xl py-3 font-bold active:scale-95 transition"
+  }, "Ver ganhador")) : !isOrg ? /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-3xl p-8 border border-stone-200 text-center"
   }, /*#__PURE__*/React.createElement(Ico, {
     name: "lock",
@@ -594,8 +588,50 @@ function RifaApp() {
   }, /*#__PURE__*/React.createElement(Ico, {
     name: "rotate",
     size: 15
-  }), " Reiniciar rifa"))), /*#__PURE__*/React.createElement("nav", {
-    className: "fixed bottom-0 inset-x-0 max-w-md mx-auto bg-white border-t border-stone-200 grid grid-cols-4 z-40"
+  }), " Reiniciar rifa")), tab === "ganhador" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
+    style: serif,
+    className: "text-lg font-bold mb-3"
+  }, "Ganhador"), data.sorteio ? /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950 rounded-3xl p-6 text-center shadow-lg"
+  }, /*#__PURE__*/React.createElement(Ico, {
+    name: "trophy",
+    size: 44,
+    className: "mx-auto mb-2"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs uppercase tracking-widest font-bold"
+  }, "Número sorteado"), /*#__PURE__*/React.createElement("p", {
+    style: serif,
+    className: "text-7xl font-bold my-1 leading-none"
+  }, data.sorteio.numero), /*#__PURE__*/React.createElement("div", {
+    className: "bg-amber-950/10 rounded-2xl py-4 mt-4"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] uppercase tracking-wide opacity-70"
+  }, "Ganhador(a)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-bold"
+  }, data.sorteio.nome), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm"
+  }, data.sorteio.contato)), waLink(data.sorteio.contato) && /*#__PURE__*/React.createElement("a", {
+    href: waLink(data.sorteio.contato),
+    target: "_blank",
+    rel: "noreferrer",
+    className: "mt-3 w-full inline-flex items-center justify-center gap-2 bg-amber-950/15 rounded-xl py-2.5 px-4 font-semibold text-sm"
+  }, /*#__PURE__*/React.createElement(Ico, {
+    name: "phone",
+    size: 16
+  }), " Avisar o ganhador"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] mt-3 opacity-70"
+  }, "Sorteado em ", new Date(data.sorteio.ts).toLocaleString("pt-BR"))) : /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-3xl p-10 border border-stone-200 text-center"
+  }, /*#__PURE__*/React.createElement(Ico, {
+    name: "trophy",
+    size: 40,
+    className: "mx-auto mb-3 text-stone-300"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-stone-500 font-semibold mb-1"
+  }, "Ainda não temos ganhador"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-stone-400"
+  }, "Assim que o organizador realizar o sorteio, o número e o nome do ganhador aparecem aqui. 🍀")))), /*#__PURE__*/React.createElement("nav", {
+    className: "fixed bottom-0 inset-x-0 max-w-md mx-auto bg-white border-t border-stone-200 grid grid-cols-5 z-40"
   }, [{
     id: "numeros",
     icon: "ticket",
@@ -610,16 +646,22 @@ function RifaApp() {
     label: "Pix"
   }, {
     id: "sorteio",
-    icon: "trophy",
+    icon: "sparkles",
     label: "Sorteio"
+  }, {
+    id: "ganhador",
+    icon: "trophy",
+    label: "Ganhador"
   }].map(t => /*#__PURE__*/React.createElement("button", {
     key: t.id,
     onClick: () => setTab(t.id),
-    className: "flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium " + (tab === t.id ? "text-emerald-700" : "text-stone-400")
+    className: "flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium leading-none " + (tab === t.id ? "text-emerald-700" : "text-stone-400")
   }, /*#__PURE__*/React.createElement(Ico, {
     name: t.icon,
-    size: 20
-  }), " ", t.label))), reservar !== null && /*#__PURE__*/React.createElement(Modal, {
+    size: 19
+  }), " ", /*#__PURE__*/React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, t.label)))), reservar !== null && /*#__PURE__*/React.createElement(Modal, {
     onClose: () => setReservar(null)
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-1"
