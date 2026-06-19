@@ -42,23 +42,24 @@ const SUPABASE_URL = "https://fapzasroiscnxphkmxtd.supabase.co";
 const SUPABASE_KEY = "sb_publishable__dQHg16_44Cbs99ieVTc5g_CqvpyfaJ";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ───────── Configuração da rifa ───────── */
+/* ───────── Configuração fixa (no arquivo) ───────── */
 const CONFIG = {
-  titulo: "Rifa Beneficente",
-  subtitulo: "Feitura de Candomblé",
-  valor: 10,
-  premio: 200,
   totalNumeros: 100,
   senha: "axe2025",
   pix: {
-    chave: "sua-chave-pix@email.com",
-    nome: "NOME DO RECEBEDOR",
+    chave: "+5521997814008",
+    nome: "LUIS CARLOS SOUSA SANTOS",
     cidade: "RIO DE JANEIRO"
-  }
+  },
+  // Valores iniciais — depois editáveis pelo organizador (sincronizam pra todos)
+  titulo: "Rifa Beneficente",
+  subtitulo: "Feitura de Candomblé",
+  valor: 10,
+  premio: 200
 };
 
 /* ───────── Helpers ───────── */
-const brl = n => "R$ " + Number(n).toFixed(2).replace(".", ",");
+const brl = n => "R$ " + Number(n || 0).toFixed(2).replace(".", ",");
 const semAcento = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const waLink = c => {
   const d = (c || "").replace(/\D/g, "");
@@ -101,7 +102,8 @@ const ICONS = {
   rotate: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-  sparkles: '<path d="m12 3 1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z"/>'
+  sparkles: '<path d="m12 3 1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>'
 };
 function Ico({
   name,
@@ -135,7 +137,7 @@ function Modal({
     className: "fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-stone-900/50 p-0 sm:p-4",
     onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl",
+    className: "w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto",
     onClick: e => e.stopPropagation()
   }, children));
 }
@@ -165,6 +167,12 @@ function RifaApp() {
     participantes: {},
     sorteio: null
   });
+  const [cfg, setCfg] = useState({
+    titulo: CONFIG.titulo,
+    subtitulo: CONFIG.subtitulo,
+    valor: CONFIG.valor,
+    premio: CONFIG.premio
+  });
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState("numeros");
   const [isOrg, setIsOrg] = useState(false);
@@ -172,21 +180,27 @@ function RifaApp() {
   const [reservar, setReservar] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
   const [pedirSenha, setPedirSenha] = useState(false);
+  const [editAberto, setEditAberto] = useState(false);
   const [nome, setNome] = useState("");
   const [contato, setContato] = useState("");
   const [senha, setSenha] = useState("");
   const [erroSenha, setErroSenha] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  // campos de edição da config
+  const [eTitulo, setETitulo] = useState("");
+  const [eSub, setESub] = useState("");
+  const [eValor, setEValor] = useState("");
+  const [ePremio, setEPremio] = useState("");
   const participantes = data.participantes || {};
   const reservados = Object.keys(participantes);
   const pagos = reservados.filter(n => participantes[n].pago);
-  const arrecadado = pagos.length * CONFIG.valor;
+  const arrecadado = pagos.length * Number(cfg.valor || 0);
   const pixCode = useMemo(() => gerarPix({
-    ...CONFIG.pix,
-    valor: CONFIG.valor
+    chave: CONFIG.pix.chave,
+    nome: CONFIG.pix.nome,
+    cidade: CONFIG.pix.cidade
   }), []);
-  const pixConfigurado = !CONFIG.pix.chave.includes("sua-chave-pix");
   async function carregar() {
     const {
       data: parts
@@ -194,6 +208,25 @@ function RifaApp() {
     const {
       data: sort
     } = await db.from("rifa_sorteio").select("*").maybeSingle();
+    let novaCfg = {
+      titulo: CONFIG.titulo,
+      subtitulo: CONFIG.subtitulo,
+      valor: CONFIG.valor,
+      premio: CONFIG.premio
+    };
+    try {
+      const {
+        data: c
+      } = await db.from("rifa_config").select("*").maybeSingle();
+      if (c) {
+        novaCfg = {
+          titulo: c.titulo != null ? c.titulo : novaCfg.titulo,
+          subtitulo: c.subtitulo != null ? c.subtitulo : novaCfg.subtitulo,
+          valor: c.valor != null ? c.valor : novaCfg.valor,
+          premio: c.premio != null ? c.premio : novaCfg.premio
+        };
+      }
+    } catch (e) {/* tabela de config ainda não existe — usa os padrões */}
     const obj = {};
     (parts || []).forEach(r => {
       obj[r.numero] = {
@@ -211,6 +244,7 @@ function RifaApp() {
         ts: sort.sorteado_em
       } : null
     });
+    setCfg(novaCfg);
     setLoaded(true);
   }
   useEffect(() => {
@@ -223,6 +257,10 @@ function RifaApp() {
       event: "*",
       schema: "public",
       table: "rifa_sorteio"
+    }, carregar).on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "rifa_config"
     }, carregar).subscribe();
     return () => {
       db.removeChannel(canal);
@@ -297,6 +335,32 @@ function RifaApp() {
     setTab("numeros");
     carregar();
   }
+  function abrirEdicao() {
+    setETitulo(cfg.titulo || "");
+    setESub(cfg.subtitulo || "");
+    setEValor(String(cfg.valor != null ? cfg.valor : ""));
+    setEPremio(String(cfg.premio != null ? cfg.premio : ""));
+    setEditAberto(true);
+  }
+  async function salvarConfig() {
+    const payload = {
+      id: 1,
+      titulo: eTitulo.trim() || CONFIG.titulo,
+      subtitulo: eSub.trim(),
+      valor: Number(String(eValor).replace(",", ".")) || 0,
+      premio: Number(String(ePremio).replace(",", ".")) || 0,
+      atualizado_em: new Date().toISOString()
+    };
+    const {
+      error
+    } = await db.from("rifa_config").upsert(payload);
+    if (error) {
+      alert("Não consegui salvar. Verifique se você rodou o SQL da tabela 'rifa_config'. Detalhe: " + error.message);
+      return;
+    }
+    setEditAberto(false);
+    carregar();
+  }
   function copiarPix() {
     try {
       navigator.clipboard.writeText(pixCode);
@@ -319,19 +383,27 @@ function RifaApp() {
   }, /*#__PURE__*/React.createElement(Ico, {
     name: "sparkles",
     size: 14
-  }), " Rifa Beneficente"), /*#__PURE__*/React.createElement("button", {
+  }), " Rifa Beneficente"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, isOrg && /*#__PURE__*/React.createElement("button", {
+    onClick: abrirEdicao,
+    className: "flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 bg-emerald-900/40 text-emerald-200"
+  }, /*#__PURE__*/React.createElement(Ico, {
+    name: "edit",
+    size: 14
+  }), " Editar"), /*#__PURE__*/React.createElement("button", {
     onClick: () => isOrg ? setIsOrg(false) : setPedirSenha(true),
     className: "flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 transition " + (isOrg ? "bg-amber-400 text-amber-950" : "bg-emerald-900/40 text-emerald-200")
   }, /*#__PURE__*/React.createElement(Ico, {
     name: isOrg ? "unlock" : "lock",
     size: 14
-  }), " ", isOrg ? "Sair" : "Organizador")), /*#__PURE__*/React.createElement("h1", {
+  }), " ", isOrg ? "Sair" : "Organizador"))), /*#__PURE__*/React.createElement("h1", {
     style: serif,
     className: "mt-1 text-3xl font-bold leading-tight"
-  }, CONFIG.titulo), /*#__PURE__*/React.createElement("p", {
+  }, cfg.titulo), cfg.subtitulo ? /*#__PURE__*/React.createElement("p", {
     style: serif,
     className: "text-emerald-200 text-lg italic"
-  }, CONFIG.subtitulo), /*#__PURE__*/React.createElement("div", {
+  }, cfg.subtitulo) : null, /*#__PURE__*/React.createElement("div", {
     className: "mt-4 flex gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 bg-emerald-900/40 rounded-2xl px-3 py-2.5"
@@ -339,7 +411,7 @@ function RifaApp() {
     className: "text-[11px] text-emerald-300 uppercase tracking-wide"
   }, "Valor"), /*#__PURE__*/React.createElement("p", {
     className: "text-xl font-bold"
-  }, brl(CONFIG.valor)), /*#__PURE__*/React.createElement("p", {
+  }, brl(cfg.valor)), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-emerald-200/70"
   }, "por número")), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 bg-amber-400 text-amber-950 rounded-2xl px-3 py-2.5"
@@ -350,7 +422,7 @@ function RifaApp() {
     size: 12
   }), " Prêmio"), /*#__PURE__*/React.createElement("p", {
     className: "text-xl font-bold"
-  }, brl(CONFIG.premio)), /*#__PURE__*/React.createElement("p", {
+  }, brl(cfg.premio)), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] opacity-70"
   }, "para o ganhador"))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4"
@@ -449,7 +521,7 @@ function RifaApp() {
     className: "text-lg font-bold mb-1"
   }, "Pagamento via Pix"), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-stone-500 mb-4"
-  }, brl(CONFIG.valor), " por número. Após pagar, avise o organizador pelo contato informado."), /*#__PURE__*/React.createElement("div", {
+  }, "Cada número custa ", brl(cfg.valor), ". Escaneie o QR e, no app do banco, ", /*#__PURE__*/React.createElement("b", null, "digite o valor"), " (", brl(cfg.valor), " por número)."), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-3xl p-5 border border-stone-200 text-center"
   }, /*#__PURE__*/React.createElement("img", {
     alt: "QR Code Pix",
@@ -467,9 +539,9 @@ function RifaApp() {
   }, /*#__PURE__*/React.createElement(Ico, {
     name: copiado ? "check" : "copy",
     size: 18
-  }), " ", copiado ? "Código copiado!" : "Copiar código Pix"), !pixConfigurado && /*#__PURE__*/React.createElement("p", {
-    className: "mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg p-2"
-  }, "QR de exemplo. Me passe sua chave Pix que eu coloco a de verdade."))), tab === "sorteio" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
+  }), " ", copiado ? "Código copiado!" : "Copiar código Pix"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-3 text-xs text-stone-400"
+  }, "Depois de pagar, avise o organizador pelo seu contato."))), tab === "sorteio" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
     style: serif,
     className: "text-lg font-bold mb-3"
   }, "Sorteio"), data.sorteio ? /*#__PURE__*/React.createElement("div", {
@@ -562,7 +634,7 @@ function RifaApp() {
     size: 20
   }))), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-stone-500 mb-4"
-  }, "Reserve este número — ", brl(CONFIG.valor), "."), /*#__PURE__*/React.createElement(Field, {
+  }, "Reserve este número — ", brl(cfg.valor), "."), /*#__PURE__*/React.createElement(Field, {
     label: "Nome",
     value: nome,
     onChange: setNome,
@@ -656,7 +728,55 @@ function RifaApp() {
   }, /*#__PURE__*/React.createElement(Ico, {
     name: "unlock",
     size: 18
-  }), " Entrar")), /*#__PURE__*/React.createElement("p", {
+  }), " Entrar")), editAberto && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setEditAberto(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    style: serif,
+    className: "text-xl font-bold flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Ico, {
+    name: "edit",
+    size: 18
+  }), " Editar rifa"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditAberto(false),
+    className: "text-stone-400"
+  }, /*#__PURE__*/React.createElement(Ico, {
+    name: "x",
+    size: 20
+  }))), /*#__PURE__*/React.createElement(Field, {
+    label: "Título",
+    value: eTitulo,
+    onChange: setETitulo,
+    placeholder: "Rifa Beneficente"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Subtítulo",
+    value: eSub,
+    onChange: setESub,
+    placeholder: "Feitura de Candomblé"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Valor por número (R$)",
+    value: eValor,
+    onChange: setEValor,
+    placeholder: "10",
+    type: "number"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Prêmio (R$)",
+    value: ePremio,
+    onChange: setEPremio,
+    placeholder: "200",
+    type: "number"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-stone-400 mb-3"
+  }, "As mudanças aparecem na hora pra todo mundo que está com a rifa aberta."), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditAberto(false),
+    className: "flex-1 bg-stone-100 text-stone-600 rounded-xl py-3 font-semibold"
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    onClick: salvarConfig,
+    className: "flex-1 bg-emerald-700 text-white rounded-xl py-3 font-semibold active:scale-95 transition"
+  }, "Salvar"))), /*#__PURE__*/React.createElement("p", {
     className: "text-center text-[11px] text-stone-400 mt-8 px-4 flex items-center justify-center gap-1"
   }, /*#__PURE__*/React.createElement(Ico, {
     name: "heart",
